@@ -15,7 +15,7 @@
         (assoc :id (UUID/randomUUID))
         handler)))
 
-(defn wrap-timing [handler]
+(defn wrap-logging [handler]
   (fn [{:keys [uri request-method id] :as request}]
     (log/info "Starting Request" {:request-id     id
                                   :uri            uri

@@ -29,34 +29,44 @@
          (map (comp str/upper-case name))
          (str/join ", "))))
 
-(defn wrap-pre-flight-handler [handler]
-  (let [accept (str/join "," [json/mime-type edn/mime-type])
-        allow-methods (memoize cors-allow-method-value)]
+(def default-cors-headers {"Accept"                       (str/join "," [json/mime-type edn/mime-type])
+                           "Accept-Encoding"              "gzip"
+                           "Accept-Language"              "en-us,en;q=0.5"
+                           "Access-Control-Allow-Headers" "Content-Type"
+                           "Access-Control-Allow-Origin"  "*"
+                           "Access-Control-Max-Age"       3600
+                           "Vary"                         "Accept-Encoding, Origin"})
+
+(defn wrap-pre-flight-handler [cors-headers handler]
+  (let [allow-methods (memoize cors-allow-method-value)]
     (fn [{::keys [match]
           :keys  [id uri request-method request-handler] :as request}]
       (let [data (:data match)]
         (cond
           (and (= :options request-method)
                (some? data))
-          {:status  200
-           :headers {"Accept"                       accept
-                     "Accept-Language"              "en-us,en;q=0.5"
-                     "Accept-Encoding"              "gzip,deflate"
-                     "Connection"                   "keep-alive"
-                     "Access-Control-Max-Age"       3600
-                     "Access-Control-Allow-Origin"  "*"
-                     "Access-Control-Allow-Methods" (allow-methods (set (keys data)))
-                     "Access-Control-Allow-Headers" "Content-Type"}}
+          {:status  204
+           :headers (assoc cors-headers
+                      "Access-Control-Allow-Methods" (allow-methods (set (keys data))))}
 
           request-handler
           (assoc-in
             (handler request)
-            [:headers "Access-Control-Allow-Origin"] "*")
+            [:headers "Access-Control-Allow-Origin"] (get cors-headers "Access-Control-Allow-Origin"))
 
           :else {:status 405
                  :body   {:uri        uri
                           :request-id id
                           :method     request-method}})))))
+
+(def default-response-headers {"Cache-Control"   "no-cache"
+                               "Connection"      "Keep-Alive"
+                               "Accept-Encoding" "gzip,deflate"})
+
+(defn wrap-response-headers [headers handler]
+  (fn [{:as request}]
+    (let [response (handler request)]
+      (update response :headers #(merge headers %)))))
 
 (defn wrap-match-handler [router handler]
   (fn [{:as request}]

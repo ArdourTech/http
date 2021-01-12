@@ -12,32 +12,55 @@
   (:import
     (java.io Closeable)))
 
-(defn handler [routes & [inject-middle-ware]]
+(def default-cors-headers stage/default-cors-headers)
+(def default-response-headers stage/default-response-headers)
+(def default-headers {:cors     default-cors-headers
+                      :response default-response-headers})
+
+(defn handler [routes & [{:keys                   [inject-middleware
+                                                   request-ids?
+                                                   request-logging?
+                                                   throw-exceptions?
+                                                   lazy-body-decode?
+                                                   content-negotiation?
+                                                   decode-params?]
+                          {:keys [cors response]} :headers
+                          :or                     {throw-exceptions?    false
+                                                   lazy-body-decode?    true
+                                                   content-negotiation? true
+                                                   decode-params?       true}
+                          :as                     opts}]]
   (let [router (r/router routes)
-        default-middleware ((or inject-middle-ware identity)
-                            (sorted-map
-                              0 logging/wrap-request-id
-                              10 logging/wrap-timing
-                              20 exception/wrap-handler
-                              40 stage/wrap-pre-flight-handler
-                              50 misc/wrap-lazy-map
-                              60 content/wrap-negotiation
-                              70 params/wrap-decode))]
+        response-headers (get-in opts [:headers :response])
+        cors-headers (get-in opts [:headers :cors])
+        middleware (cond-> (sorted-map)
+                     request-ids? (assoc 100 logging/wrap-request-id)
+                     request-logging? (assoc 200 logging/wrap-logging)
+                     response-headers (assoc 300 (partial stage/wrap-response-headers response-headers))
+                     cors-headers (assoc 400 (partial stage/wrap-pre-flight-handler cors-headers))
+                     (not throw-exceptions?) (assoc 500 exception/wrap-handler)
+                     lazy-body-decode? (assoc 600 misc/wrap-lazy-map)
+                     content-negotiation? (assoc 700 content/wrap-negotiation)
+                     decode-params? (assoc 800 params/wrap-decode)
+                     inject-middleware inject-middleware)]
+    (assert (and (map? middleware)
+                 (sorted? middleware)))
     (->> (concat
            [(fn [{:keys [request-handler] :as request}]
               (request-handler request))]
-           (vals default-middleware)
+           (reverse (vals middleware))
            [(partial stage/wrap-match-handler router)])
          (reduce (fn [v h] (h v))))))
 
-(defn start [{:keys [port]
-              :or   {port 8080}
-              :as   system}
-             routes]
+(defn start [{:keys [port routes compression?]
+              :or   {port         8080
+                     compression? true}
+              :as   opts}]
+  {:pre [(some? routes)]}
   (log/info "Starting Web Server" {:host "localhost"
                                    :port port})
-  (http/start-server (handler routes) {:compression? true
-                                       :port         port}))
+  (http/start-server (handler routes opts) {:compression? compression?
+                                            :port         port}))
 
 (defn stop-server [^Closeable server]
   (log/info "Stopping Web Server")
