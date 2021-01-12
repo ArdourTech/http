@@ -29,7 +29,7 @@
          (map (comp str/upper-case name))
          (str/join ", "))))
 
-(defn wrap-pre-handler [handler]
+(defn wrap-pre-flight-handler [handler]
   (let [accept (str/join "," [json/mime-type edn/mime-type])
         allow-methods (memoize cors-allow-method-value)]
     (fn [{::keys [match]
@@ -58,7 +58,7 @@
                           :request-id id
                           :method     request-method}})))))
 
-(defn wrap-match-handler [handler router]
+(defn wrap-match-handler [router handler]
   (fn [{:as request}]
     (let [[{:as match} request-handler] (match-handler router request)]
       (handler (assoc request

@@ -12,18 +12,23 @@
   (:import
     (java.io Closeable)))
 
-(defn handler [routes]
-  (let [router (r/router routes)]
-    (-> (fn [{:keys [request-handler] :as request}]
-          (request-handler request))
-        params/wrap-decode
-        content/wrap-negotiation
-        misc/wrap-lazy-map
-        stage/wrap-pre-handler
-        (stage/wrap-match-handler router)
-        exception/wrap-handler
-        logging/wrap-timing
-        logging/wrap-request-id)))
+(defn handler [routes & [inject-middle-ware]]
+  (let [router (r/router routes)
+        default-middleware ((or inject-middle-ware identity)
+                            (sorted-map
+                              0 logging/wrap-request-id
+                              10 logging/wrap-timing
+                              20 exception/wrap-handler
+                              40 stage/wrap-pre-flight-handler
+                              50 misc/wrap-lazy-map
+                              60 content/wrap-negotiation
+                              70 params/wrap-decode))]
+    (->> (concat
+           [(fn [{:keys [request-handler] :as request}]
+              (request-handler request))]
+           (vals default-middleware)
+           [(partial stage/wrap-match-handler router)])
+         (reduce (fn [v h] (h v))))))
 
 (defn start [{:keys [port]
               :or   {port 8080}
