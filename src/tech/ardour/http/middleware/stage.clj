@@ -49,7 +49,9 @@
                      "Access-Control-Allow-Headers" "Content-Type"}}
 
           request-handler
-          (handler request)
+          (assoc-in
+            (handler request)
+            [:headers "Access-Control-Allow-Origin"] "*")
 
           :else {:status 405
                  :body   {:uri        uri
