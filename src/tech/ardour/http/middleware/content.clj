@@ -7,10 +7,14 @@
 (defn encode [{{:strs [content-type accept]} :headers
                :as                           request}
               response]
-  (let [accept (or accept content-type json/mime-type)]
+  (let [response-content-type (get-in response [:headers "content-type"])
+        content-type (or response-content-type
+                         accept
+                         content-type
+                         json/mime-type)]
     (-> response
-        (update :body #(some->> % (negotiator/encode accept)))
-        (assoc-in [:headers "content-type"] accept))))
+        (update :body #(some->> % (negotiator/encode content-type)))
+        (assoc-in [:headers "content-type"] content-type))))
 
 (defn wrap-negotiation [handler]
   (fn [{{:strs [content-type]} :headers

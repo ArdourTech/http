@@ -29,13 +29,13 @@
          (map (comp str/upper-case name))
          (str/join ", "))))
 
-(def default-cors-headers {"Accept"                       (str/join "," [json/mime-type edn/mime-type])
-                           "Accept-Encoding"              "gzip"
-                           "Accept-Language"              "en-us,en;q=0.5"
-                           "Access-Control-Allow-Headers" "Content-Type"
-                           "Access-Control-Allow-Origin"  "*"
-                           "Access-Control-Max-Age"       3600
-                           "Vary"                         "Accept-Encoding, Origin"})
+(def default-cors-headers {"accept"                       (str/join "," [json/mime-type edn/mime-type])
+                           "accept-encoding"              "gzip"
+                           "accept-language"              "en-us,en;q=0.5"
+                           "access-control-allow-headers" "content-type"
+                           "access-control-allow-origin"  "*"
+                           "access-control-max-age"       3600
+                           "vary"                         "accept-encoding, origin"})
 
 (defn wrap-pre-flight-handler [cors-headers handler]
   (let [allow-methods (memoize cors-allow-method-value)]
@@ -47,21 +47,21 @@
                (some? data))
           {:status  204
            :headers (assoc cors-headers
-                      "Access-Control-Allow-Methods" (allow-methods (set (keys data))))}
+                      "access-control-allow-methods" (allow-methods (set (keys data))))}
 
           request-handler
           (assoc-in
             (handler request)
-            [:headers "Access-Control-Allow-Origin"] (get cors-headers "Access-Control-Allow-Origin"))
+            [:headers "access-control-allow-origin"] (get cors-headers "access-control-allow-origin"))
 
           :else {:status 405
                  :body   {:uri        uri
                           :request-id id
                           :method     request-method}})))))
 
-(def default-response-headers {"Cache-Control"   "no-cache"
-                               "Connection"      "Keep-Alive"
-                               "Accept-Encoding" "gzip,deflate"})
+(def default-response-headers {"cache-control"   "no-cache"
+                               "connection"      "keep-alive"
+                               "accept-encoding" "gzip,deflate"})
 
 (defn wrap-response-headers [headers handler]
   (fn [{:as request}]
