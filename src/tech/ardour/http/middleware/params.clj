@@ -10,11 +10,15 @@
 
 (def ^:private ^Charset utf-8-charset (Charset/forName "utf-8"))
 
+(defn query-string->clj [query-string]
+  (when-not (str/blank? query-string)
+    (->> (URLDecoder/decode ^String query-string utf-8-charset)
+         (query->map)
+         (n/transform-keys string? (comp keyword convert/->kebab-case)))))
+
 (defn wrap-decode [handler]
   (fn [{:keys [query-string] :as request}]
     (handler
       (if (str/blank? query-string)
         request
-        (assoc request :query-params (delay (->> (URLDecoder/decode ^String query-string utf-8-charset)
-                                                 (query->map)
-                                                 (n/transform-keys string? (comp keyword convert/->kebab-case)))))))))
+        (assoc request :query-params (delay (query-string->clj query-string)))))))
