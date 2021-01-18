@@ -3,16 +3,11 @@
     [cemerick.url :refer [query->map]]
     [clojure.string :as str]
     [tech.ardour.negotiator :as n]
-    [tech.ardour.negotiator.convert :as convert])
-  (:import
-    [java.net URLDecoder]
-    [java.nio.charset Charset]))
-
-(def ^:private ^Charset utf-8-charset (Charset/forName "utf-8"))
+    [tech.ardour.negotiator.convert :as convert]))
 
 (defn query-string->clj [query-string]
   (when-not (str/blank? query-string)
-    (->> (URLDecoder/decode ^String query-string utf-8-charset)
+    (->> query-string
          (query->map)
          (n/transform-keys string? (comp keyword convert/->kebab-case)))))
 
