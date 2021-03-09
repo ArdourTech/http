@@ -3,9 +3,9 @@
     [clojure.string :as str]
     [reitit.core :as r]
     [sieppari.context :as sc]
+    [tech.ardour.logging :as log]
     [tech.ardour.negotiator.edn :as edn]
-    [tech.ardour.negotiator.json :as json]
-    [tech.ardour.logging.core :as log]))
+    [tech.ardour.negotiator.json :as json]))
 
 (defn- match-handler [router {:keys [uri request-method]}]
   (when-let [{:keys [data] :as match} (r/match-by-path router uri)]

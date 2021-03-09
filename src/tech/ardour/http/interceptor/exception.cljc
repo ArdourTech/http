@@ -1,6 +1,6 @@
 (ns tech.ardour.http.interceptor.exception
   (:require
-    [tech.ardour.logging.core :as log]))
+    [tech.ardour.logging :as log]))
 
 (def server-error
   {:name  ::server-error

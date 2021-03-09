@@ -2,7 +2,7 @@
   (:require
     [aleph.http :as aleph]
     [tech.ardour.http :as http]
-    [tech.ardour.logging.core :as log])
+    [tech.ardour.logging :as log])
   (:import
     (java.io Closeable)))
 
@@ -14,8 +14,8 @@
   {:pre [(some? routes)]}
   (log/info "Starting Web Server" {:host "localhost"
                                    :port port})
-  (aleph/start-server (http/handler routes opts) {:compression? compression?
-                                                  :port         port}))
+  (aleph/start-server (http/->handler routes opts) {:compression? compression?
+                                                    :port         port}))
 
 (defn stop-server [^Closeable server]
   (log/info "Stopping Web Server")

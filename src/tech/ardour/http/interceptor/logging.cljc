@@ -1,24 +1,12 @@
 (ns tech.ardour.http.interceptor.logging
-  (:refer-clojure :exclude [uuid])
   (:require
-    [tech.ardour.logging.core :as log])
-  #?(:clj (:import
-            (java.util UUID)
-            (java.time Instant))))
-
-(defn epoch-milli []
-  #?(:clj  (-> (Instant/now)
-               (.toEpochMilli))
-     :cljs (system-time)))
-
-(defn- uuid []
-  #?(:clj  (UUID/randomUUID)
-     :cljs (random-uuid)))
+    [tech.ardour.logging :as log]
+    [tech.ardour.utensil :as u]))
 
 (def request-id
   {:name  ::request-id
    :enter (fn assoc-request-id-enter [{:as ctx}]
-            (assoc ctx :id (str (uuid))))
+            (assoc ctx :id (str (u/uuid))))
    :leave (fn assoc-request-id-leave [{:as ctx}]
             (assoc-in ctx
               [:response :headers "Request-Id"] (get ctx :id)))})
@@ -32,9 +20,9 @@
      :enter (fn request-enter [{{:keys [uri request-method id]} :request
                                 :as                             ctx}]
               (log/info "Starting Request" (log-ctx ctx))
-              (assoc ctx ::start-time (epoch-milli)))
+              (assoc ctx ::start-time (u/epoch-millis)))
      :leave (fn request-leave [{:as ctx}]
               (log/info "Finished Request" (assoc (log-ctx ctx)
-                                             :duration (- (epoch-milli) (get ctx ::start-time))
+                                             :duration (- (u/epoch-millis) (get ctx ::start-time))
                                              :status (get-in ctx [:response :status])))
               ctx)}))
